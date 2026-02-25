@@ -1,5 +1,19 @@
+# Virtual environments
+.venv/
+venv/
+env/
 myenv/
+app/myenv/
+
+# Python cache
 __pycache__/
 *.pyc
+
+# Env files
 .env
-*.db
+
+# Test artifacts
+.pytest_cache/
+
+# OS
+.DS_Store
