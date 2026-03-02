@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     postgres_host: str = "db"
     postgres_port: int = 5432
 
-    @property
+    @property #The @property decorator turns a method into a read-only attribute.
     def database_url(self) -> str:
         return (
             f"postgresql://{self.postgres_user}:{self.postgres_password}"
