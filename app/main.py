@@ -2,8 +2,10 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 import psycopg2
 from app.config import settings
+from app.routers import auth
 
 app = FastAPI(title=settings.app_name)
+app.include_router(auth.router, prefix="/auth", tags=["Auth"])
 
 @app.get("/health")
 def health_check():
