@@ -1,9 +1,8 @@
 from sqlalchemy import Column, Integer, String, Boolean, DateTime
-from sqlalchemy.orm import DeclarativeBase
-from datetime import datetime, timezone
+from sqlalchemy.ext.declarative import declarative_base
+from datetime import datetime
 
-class Base(DeclarativeBase):
-    pass
+Base = declarative_base()
 
 class ApiClient(Base):
     __tablename__ = "api_clients"
@@ -11,7 +10,5 @@ class ApiClient(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
     key_hash = Column(String, nullable=False, unique=True)
-    is_active = Column(Boolean, default=True, nullable=False)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc),
-                        onupdate=lambda: datetime.now(timezone.utc), nullable=False)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
