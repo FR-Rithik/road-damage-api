@@ -1,9 +1,14 @@
+import hashlib
+
 from fastapi import Depends, HTTPException, Security
 from fastapi.security import APIKeyHeader
 from sqlalchemy.orm import Session
+
 from app.database import get_db
+from app.logger import get_logger
 from app.models import ApiClient
-import hashlib
+
+logger = get_logger(__name__)
 
 API_KEY_HEADER = APIKeyHeader(name="X-API-Key", auto_error=False)
 
@@ -15,16 +20,19 @@ def get_current_client(
     db: Session = Depends(get_db),
 ) -> ApiClient:
     if not api_key:
+        logger.warning("Request missing X-API-Key header")
         raise HTTPException(status_code=401, detail="X-API-Key header missing")
 
     key_hash = hash_key(api_key)
     client = db.query(ApiClient).filter(ApiClient.key_hash == key_hash).first()
 
     if not client:
+        logger.warning("Request with invalid API key")
         raise HTTPException(status_code=403, detail="Invalid API key")
 
     if not client.is_active:
+        logger.warning(f"Request with inactive API key for client: {client.name}")
         raise HTTPException(status_code=403, detail="API key is inactive")
 
+    logger.info(f"Authenticated client: {client.name}")
     return client
-

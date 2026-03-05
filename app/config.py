@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings
 
+
 class Settings(BaseSettings):
     app_name: str = "road-damage-api"
     debug: bool = False
@@ -21,3 +22,13 @@ class Settings(BaseSettings):
         env_file = ".env"
 
 settings = Settings()
+
+##The config.py file defines a Settings class
+#  that loads configuration values (like database
+#  credentials) from the .env file using pydantic. 
+# It provides these values to the rest of your app,
+#  including a method to build the database connection
+#  URL.
+
+# The .env file stores sensitive and
+# environment-specific information 
