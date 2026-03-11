@@ -8,12 +8,21 @@ app/myenv/
 # Python cache
 __pycache__/
 *.pyc
+*.pyo
 
 # Env files
 .env
 
 # Test artifacts
 .pytest_cache/
+*.db
+*.db-shm
+*.db-wal
 
 # OS
 .DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/

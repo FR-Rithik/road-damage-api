@@ -16,3 +16,8 @@ app.add_exception_handler(500, internal_error_handler)
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+# @app.get("/db-ping")
+# def db_ping(db: Session = Depends(get_db)):
+#     db.execute(text("SELECT 1"))
+#     return {"status": "ok", "database": "connected"}
