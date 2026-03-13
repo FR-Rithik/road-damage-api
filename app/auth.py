@@ -4,6 +4,7 @@ from fastapi import Depends, HTTPException, Security
 from fastapi.security import APIKeyHeader
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.database import get_db
 from app.logger import get_logger
 from app.models import ApiClient
@@ -12,8 +13,10 @@ logger = get_logger(__name__)
 
 API_KEY_HEADER = APIKeyHeader(name="X-API-Key", auto_error=False)
 
+
 def hash_key(key: str) -> str:
     return hashlib.sha256(key.encode()).hexdigest()
+
 
 def get_current_client(
     api_key: str = Security(API_KEY_HEADER),
@@ -36,3 +39,8 @@ def get_current_client(
 
     logger.info(f"Authenticated client: {client.name}")
     return client
+
+
+def require_admin(api_key: str = Security(API_KEY_HEADER)):
+    if not api_key or api_key != settings.admin_api_key:
+        raise HTTPException(status_code=403, detail="Admin access required")
