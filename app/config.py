@@ -11,15 +11,17 @@ class Settings(BaseSettings):
     postgres_host: str = "db"
     postgres_port: int = 5432
 
-    @property #The @property decorator turns a method into a read-only attribute.
+    admin_api_key: str
+
+    @property
     def database_url(self) -> str:
         return (
             f"postgresql://{self.postgres_user}:{self.postgres_password}"
             f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
         )
 
-    class Config:
-        env_file = ".env"
+    model_config = {"env_file": ".env"}
+
 
 settings = Settings()
 
