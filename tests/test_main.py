@@ -4,7 +4,7 @@ def test_health(client):
     assert response.json()["status"] == "ok"
 
 
-def test_echo(client):
-    response = client.post("/echo", json={"message": "hello"})
-    assert response.status_code == 200
-    assert response.json() == {"message": "hello"}
+def test_not_found_handler(client):
+    response = client.get("/does-not-exist")
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Resource not found"}

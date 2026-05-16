@@ -35,7 +35,11 @@ def setup_db():
     active_client = ApiClient(name="Test Client", key_hash=hashed, is_active=True)
 
     hashed_inactive = hashlib.sha256("inactive-key-123".encode()).hexdigest()
-    inactive_client = ApiClient(name="Inactive Client", key_hash=hashed_inactive, is_active=False)
+    inactive_client = ApiClient(
+        name="Inactive Client",
+        key_hash=hashed_inactive,
+        is_active=False,
+    )
 
     db.add(active_client)
     db.add(inactive_client)
