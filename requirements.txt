@@ -11,5 +11,6 @@ sqlalchemy==2.0.36
 alembic==1.14.0
 
 python-multipart
+ultralytics==8.4.165
 
 ruff

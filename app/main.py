@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.database import get_db
 from app.errors import internal_error_handler, not_found_handler
-from app.routers import auth, images
+from app.routers import auth, images, predict
 
 app = FastAPI(
     title=settings.app_name,
@@ -14,6 +14,7 @@ app = FastAPI(
 
 app.include_router(auth.router, prefix="/auth", tags=["Auth"])
 app.include_router(images.router, prefix="/images", tags=["Images"])
+app.include_router(predict.router, prefix="", tags=["Prediction"])
 
 app.add_exception_handler(404, not_found_handler)
 app.add_exception_handler(500, internal_error_handler)

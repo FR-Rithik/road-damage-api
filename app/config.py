@@ -1,26 +1,38 @@
-from pydantic_settings import BaseSettings
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     app_name: str = "road-damage-api"
     debug: bool = False
 
-    postgres_user: str
-    postgres_password: str
-    postgres_db: str
+    postgres_user: str = "road_user"
+    postgres_password: str = "road_pass"
+    postgres_db: str = "road_db"
     postgres_host: str = "db"
     postgres_port: int = 5432
 
-    admin_api_key: str
+    admin_api_key: str = "supersecretadminkey"
+
+    model_path: str = "best.pt"
+    model_confidence_threshold: float = 0.25
+    model_imgsz: int = 640
+
+    database_url_override: str | None = Field(
+        default=None,
+        validation_alias="DATABASE_URL",
+    )
 
     @property
     def database_url(self) -> str:
+        if self.database_url_override:
+            return self.database_url_override
         return (
             f"postgresql://{self.postgres_user}:{self.postgres_password}"
             f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
         )
 
-    model_config = {"env_file": ".env"}
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 
 settings = Settings()

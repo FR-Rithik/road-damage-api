@@ -2,11 +2,13 @@ import os
 import uuid
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi.concurrency import run_in_threadpool
 from sqlalchemy.orm import Session
 
 from app.auth import get_current_client
 from app.database import get_db
 from app.logger import get_logger
+from app.model_service import predict_image
 from app.models import ApiClient, Image
 
 logger = get_logger(__name__)
@@ -22,16 +24,29 @@ async def upload_image(
     db: Session = Depends(get_db),
     client: ApiClient = Depends(get_current_client),
 ):
-    if not file.content_type.startswith("image/"):
+    if not file.content_type or not file.content_type.startswith("image/"):
         raise HTTPException(status_code=422, detail="Only image files are allowed")
 
-    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    contents = await file.read()
+    try:
+        prediction = await run_in_threadpool(
+            predict_image, contents, file.filename or "uploaded-image"
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except FileNotFoundError as exc:
+        logger.exception("Road-damage model checkpoint is unavailable")
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except Exception as exc:  # pragma: no cover - model/runtime dependent
+        logger.exception("Road-damage prediction failed")
+        raise HTTPException(status_code=500, detail="Prediction failed") from exc
 
-    ext = os.path.splitext(file.filename)[-1].lower()
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    original_filename = file.filename or "uploaded-image"
+    ext = os.path.splitext(original_filename)[-1].lower()
     unique_filename = f"{uuid.uuid4().hex}{ext}"
     file_path = os.path.join(UPLOAD_DIR, unique_filename)
 
-    contents = await file.read()
     with open(file_path, "wb") as f:
         f.write(contents)
 
@@ -50,4 +65,6 @@ async def upload_image(
         "image_id": image.id,
         "filename": image.filename,
         "created_at": image.created_at,
+        "prediction": prediction,
+        "report": prediction["report"],
     }
