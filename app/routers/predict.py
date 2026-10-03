@@ -6,6 +6,7 @@ from app.auth import get_current_client
 from app.database import get_db
 from app.model_service import predict_image
 from app.models import ApiClient
+from app.uploads import read_upload_with_limit
 
 router = APIRouter()
 
@@ -17,10 +18,7 @@ async def predict(
     client: ApiClient = Depends(get_current_client),
 ):
     del db
-    if not file.content_type or not file.content_type.startswith("image/"):
-        raise HTTPException(status_code=422, detail="Only image files are allowed")
-
-    image_bytes = await file.read()
+    image_bytes = await read_upload_with_limit(file)
 
     try:
         return await run_in_threadpool(

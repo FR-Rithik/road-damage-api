@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 from pathlib import Path
+from threading import Lock
 from typing import Any
 
 from PIL import Image, UnidentifiedImageError
@@ -10,8 +11,12 @@ from app.config import settings
 from app.logger import get_logger
 
 logger = get_logger(__name__)
-
 _model = None
+
+ALLOWED_FORMATS = {"JPEG", "PNG", "WEBP"}
+
+_model_load_lock = Lock()
+_inference_lock = Lock()
 
 
 def get_model() -> Any:
@@ -19,22 +24,33 @@ def get_model() -> Any:
     if _model is not None:
         return _model
 
-    model_path = Path(settings.model_path)
-    if not model_path.is_absolute():
-        model_path = (Path(__file__).resolve().parent.parent / model_path).resolve()
+    # Startup normally loads the model, but retain this guard for direct callers
+    # (including scripts) and make concurrent first calls safe.
+    with _model_load_lock:
+        if _model is not None:
+            return _model
 
-    if not model_path.exists():
-        raise FileNotFoundError(
-            "Model not found at "
-            f"{model_path}. Add the trained checkpoint as best.pt "
-            "or set MODEL_PATH."
-        )
+        model_path = Path(settings.model_path)
+        if not model_path.is_absolute():
+            model_path = (Path(__file__).resolve().parent.parent / model_path).resolve()
 
-    from ultralytics import YOLO
+        if not model_path.exists():
+            raise FileNotFoundError(
+                "Model not found at "
+                f"{model_path}. Add the trained checkpoint as best.pt "
+                "or set MODEL_PATH."
+            )
 
-    logger.info("Loading YOLO model from %s", model_path)
-    _model = YOLO(str(model_path))
+        from ultralytics import YOLO
+
+        logger.info("Loading YOLO model from %s", model_path)
+        _model = YOLO(str(model_path))
     return _model
+
+
+def is_model_ready() -> bool:
+    """Return whether this process has successfully initialized the model."""
+    return _model is not None
 
 
 def _normalize_box(box: Any) -> list[float]:
@@ -122,20 +138,37 @@ def _build_report(detections: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def predict_image(image_bytes: bytes, filename: str = "image.jpg") -> dict[str, Any]:
-    try:
-        image = Image.open(io.BytesIO(image_bytes))
-        image.load()
-    except (UnidentifiedImageError, OSError) as exc:
-        raise ValueError("The uploaded file is not a valid image") from exc
 
+    try:
+        image = Image.open(io.BytesIO(image_bytes))  # lazy: reads the header only
+
+        if image.format not in ALLOWED_FORMATS:
+            raise ValueError("Unsupported image format. Use JPEG, PNG or WebP")
+
+        width, height = image.size
+        if width * height > settings.max_image_pixels:
+            raise ValueError(
+                f"Image too large ({width}x{height}). "
+                f"Maximum is {settings.max_image_pixels:,} pixels"
+            )
+
+        image.load()  # the expensive full decode, only after the checks pass
+    except Image.DecompressionBombError as exc:
+        raise ValueError("Image dimensions are too large") from exc
+    except (UnidentifiedImageError, OSError) as exc:
+        raise ValueError("The uploaded file is not a valid image") from exc    
     image_width, image_height = image.size
-    model = get_model()
-    results = model(
-        image,
-        conf=settings.model_confidence_threshold,
-        imgsz=settings.model_imgsz,
-        verbose=False,
-    )
+    # Ultralytics inference mutates model state internally. Keep use of the
+    # shared model serialized instead of allowing the FastAPI threadpool to
+    # invoke it concurrently.
+    with _inference_lock:
+        model = get_model()
+        results = model(
+            image,
+            conf=settings.model_confidence_threshold,
+            imgsz=settings.model_imgsz,
+            verbose=False,
+        )
 
     detections: list[dict[str, Any]] = []
     if isinstance(results, (list, tuple)):

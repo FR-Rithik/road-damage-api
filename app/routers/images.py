@@ -10,6 +10,7 @@ from app.database import get_db
 from app.logger import get_logger
 from app.model_service import predict_image
 from app.models import ApiClient, Image
+from app.uploads import read_upload_with_limit
 
 logger = get_logger(__name__)
 
@@ -24,10 +25,7 @@ async def upload_image(
     db: Session = Depends(get_db),
     client: ApiClient = Depends(get_current_client),
 ):
-    if not file.content_type or not file.content_type.startswith("image/"):
-        raise HTTPException(status_code=422, detail="Only image files are allowed")
-
-    contents = await file.read()
+    contents = await read_upload_with_limit(file)
     try:
         prediction = await run_in_threadpool(
             predict_image, contents, file.filename or "uploaded-image"

@@ -61,9 +61,12 @@ X-API-Key: your-api-key-here
 
 ## Road-damage detection
 
-The API loads `best.pt` lazily on the first prediction. Set `MODEL_PATH` to use a
-checkpoint stored elsewhere. `POST /images` both saves the upload and returns the
-raw detections plus a compact `report` grouped by the model's class labels.
+The API loads `best.pt` during startup, before accepting requests. `GET /health`
+reports `model: "ready"` only after the checkpoint has loaded; it returns 503 with
+`model: "unavailable"` if loading failed. Set `MODEL_PATH` to use a checkpoint
+stored elsewhere. Inference on the shared model is serialized to avoid unsafe
+concurrent model access. `POST /images` both saves the upload and returns the raw
+detections plus a compact `report` grouped by the model's class labels.
 
 ```bash
 curl -X POST http://localhost:8000/images \

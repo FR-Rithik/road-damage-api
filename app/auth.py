@@ -1,4 +1,5 @@
 import hashlib
+import secrets
 
 from fastapi import Depends, HTTPException, Security
 from fastapi.security import APIKeyHeader
@@ -41,6 +42,13 @@ def get_current_client(
     return client
 
 
+
 def require_admin(api_key: str = Security(API_KEY_HEADER)):
-    if not api_key or api_key != settings.admin_api_key:
+    if not api_key:
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    if not secrets.compare_digest(
+        api_key.encode("utf-8"),
+        settings.admin_api_key.encode("utf-8"),
+    ):
         raise HTTPException(status_code=403, detail="Admin access required")
