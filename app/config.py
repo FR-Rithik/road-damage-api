@@ -1,4 +1,4 @@
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -24,6 +24,14 @@ class Settings(BaseSettings):
         default=None,
         validation_alias="DATABASE_URL",
     )
+
+    @field_validator("debug", mode="before")
+    @classmethod
+    def parse_debug_mode(cls, value: object) -> object:
+        """Treat common deployment mode labels as a disabled debug flag."""
+        if isinstance(value, str) and value.lower() in {"release", "production"}:
+            return False
+        return value
 
     @property
     def database_url(self) -> str:

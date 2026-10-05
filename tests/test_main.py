@@ -1,7 +1,29 @@
+from sqlalchemy.exc import OperationalError
+
+from app.errors import database_error_handler
+
+
 def test_health(client):
     response = client.get("/health")
     assert response.status_code == 200
     assert response.json() == {"status": "ok", "db": "connected", "model": "ready"}
+
+
+def test_frontend_is_served(client):
+    response = client.get("/")
+    assert response.status_code == 200
+    assert "Roadwatch" in response.text
+
+
+def test_database_errors_return_a_service_unavailable_response(client):
+    response = database_error_handler(
+        client,
+        OperationalError("SELECT 1", {}, RuntimeError("Database is offline")),
+    )
+    assert response.status_code == 503
+    assert response.body == (
+        b'{"detail":"Database unavailable. Start the Postgres service and try again."}'
+    )
 
 
 def test_not_found_handler(client):

@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#123f39" />
+    <title>Roadwatch | Damage Assessment</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Application settings">
+        <a class="brand" href="/" aria-label="Roadwatch home">
+          <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span>Roadwatch</span>
+        </a>
+
+        <div class="sidebar-heading">Workspace</div>
+        <nav class="nav-list" aria-label="Workspace navigation">
+          <a class="nav-item active" href="#assessment">New assessment</a>
+          <a class="nav-item" href="#results">Detection report</a>
+          <a class="nav-item" href="#activity">Session activity</a>
+        </nav>
+
+        <section class="connection-panel" aria-labelledby="connection-title">
+          <div class="panel-kicker">Connection</div>
+          <h2 id="connection-title">API session</h2>
+          <label class="field-label" for="api-key">X-API-Key</label>
+          <input id="api-key" type="password" autocomplete="off" placeholder="Paste your API key" />
+          <button class="secondary-button" id="connect-button" type="button">Connect</button>
+          <p class="connection-state" id="connection-state" data-state="idle">No API key loaded</p>
+        </section>
+
+        <div class="sidebar-footer">
+          <span class="status-dot" id="health-dot"></span>
+          <span id="health-state">Checking service</span>
+        </div>
+      </aside>
+
+      <main>
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Field intelligence</p>
+            <h1>Road condition review</h1>
+          </div>
+          <div class="topbar-meta">
+            <span id="client-name">Local session</span>
+            <span class="date" id="today"></span>
+          </div>
+        </header>
+
+        <div class="content" id="assessment">
+          <section class="upload-panel" aria-labelledby="upload-title">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Image input</p>
+                <h2 id="upload-title">Inspect a roadway photo</h2>
+              </div>
+              <span class="file-name" id="file-name">Reference image</span>
+            </div>
+
+            <div class="image-stage" id="drop-zone">
+              <div class="media-frame">
+                <img id="preview-image" src="/reference-image" alt="Reference road damage examples" />
+                <canvas id="annotation-canvas" aria-label="Damage annotations"></canvas>
+              </div>
+              <label class="drop-prompt" id="drop-prompt" for="file-input">
+                <span class="prompt-title">Drop road image here</span>
+                <span>JPEG, PNG or WebP up to 1 MB</span>
+              </label>
+              <input id="file-input" type="file" accept="image/jpeg,image/png,image/webp" />
+            </div>
+
+            <div class="upload-actions">
+              <label class="check-control" for="save-report">
+                <input id="save-report" type="checkbox" />
+                <span>Save to image register</span>
+              </label>
+              <div class="button-group">
+                <button class="text-button" id="clear-button" type="button">Reset</button>
+                <button class="primary-button" id="analyze-button" type="button" disabled>Analyze image</button>
+              </div>
+            </div>
+            <p class="form-message" id="form-message" role="status"></p>
+          </section>
+
+          <aside class="report-panel" id="results" aria-labelledby="report-title">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Assessment</p>
+                <h2 id="report-title">Detection report</h2>
+              </div>
+              <span class="report-state" id="report-state" data-status="idle">Awaiting image</span>
+            </div>
+
+            <div class="score-block">
+              <span>Total instances</span>
+              <strong id="total-detections">0</strong>
+              <p id="report-summary">Choose an image to start a new road condition assessment.</p>
+            </div>
+
+            <div class="damage-breakdown">
+              <div class="table-labels">
+                <span>Damage class</span><span>Count</span><span>Confidence</span>
+              </div>
+              <div id="damage-types" class="damage-rows">
+                <p class="empty-row">Results will appear here.</p>
+              </div>
+            </div>
+
+            <div class="legend" aria-label="Annotation legend">
+              <span><i class="legend-swatch d00"></i>D00</span>
+              <span><i class="legend-swatch d10"></i>D10</span>
+              <span><i class="legend-swatch d20"></i>D20</span>
+              <span><i class="legend-swatch d40"></i>D40</span>
+            </div>
+          </aside>
+        </div>
+
+        <section class="activity-panel" id="activity" aria-labelledby="activity-title">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">This session</p>
+              <h2 id="activity-title">Recent assessments</h2>
+            </div>
+            <span class="session-count" id="session-count">0 completed</span>
+          </div>
+          <div class="activity-list" id="activity-list">
+            <p class="empty-activity">No assessments in this browser session.</p>
+          </div>
+        </section>
+      </main>
+    </div>
+    <script src="/static/app.js" defer></script>
+  </body>
+</html>
