@@ -60,9 +60,11 @@ def frontend():
     return FileResponse(STATIC_DIR / "index.html")
 
 
+REFERENCE_IMAGE = STATIC_DIR / "reference-image.png"
+
 @app.get("/reference-image", include_in_schema=False)
 def reference_image():
-    return FileResponse(PROJECT_DIR / "image.png")
+    return FileResponse(REFERENCE_IMAGE)
 
 
 @app.get("/health")

@@ -3,11 +3,29 @@ from sqlalchemy.exc import OperationalError
 from app.errors import database_error_handler
 
 
-def test_health(client):
-    response = client.get("/health")
-    assert response.status_code == 200
-    assert response.json() == {"status": "ok", "db": "connected", "model": "ready"}
+def test_health_when_model_is_ready(client, monkeypatch):
+    monkeypatch.setattr("app.main.is_model_ready", lambda: True)
 
+    response = client.get("/health")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "status": "ok",
+        "db": "connected",
+        "model": "ready",
+    }
+
+def test_health_when_model_is_unavailable(client, monkeypatch):
+    monkeypatch.setattr("app.main.is_model_ready", lambda: False)
+
+    response = client.get("/health")
+
+    assert response.status_code == 503
+    assert response.json() == {
+        "status": "degraded",
+        "db": "connected",
+        "model": "unavailable",
+    }
 
 def test_frontend_is_served(client):
     response = client.get("/")

@@ -31,8 +31,8 @@ Thumbs.db
 data/uploads/
 
 # Local ML checkpoints and manual test images
-*.pt
-/image.png
+# *.pt
+# /image.png
 
 #Local Notes/Docs
 explanations/
