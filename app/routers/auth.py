@@ -39,6 +39,23 @@ def create_key(
     }
 
 
+@router.get("/keys")
+def list_keys(
+    db: Session = Depends(get_db),
+    _: None = Depends(require_admin),
+):
+    clients = db.query(ApiClient).order_by(ApiClient.id).all()
+    return [
+        {
+            "id": client.id,
+            "name": client.name,
+            "is_active": client.is_active,
+            "created_at": client.created_at,
+        }
+        for client in clients
+    ]
+
+
 @router.delete("/keys/{client_id}", status_code=200)
 def revoke_key(
     client_id: int,

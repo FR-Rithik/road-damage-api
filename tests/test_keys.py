@@ -18,6 +18,25 @@ def test_create_key_without_admin_key(client):
     assert response.status_code == 403
 
 
+def test_list_keys_as_admin(client):
+    response = client.get(
+        "/auth/keys",
+        headers={"X-API-Key": ADMIN_KEY},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert {item["name"] for item in data} == {"Test Client", "Inactive Client"}
+    assert all("key_hash" not in item for item in data)
+
+
+def test_list_keys_denies_client_key(client):
+    response = client.get(
+        "/auth/keys",
+        headers={"X-API-Key": "valid-key-123"},
+    )
+    assert response.status_code == 403
+
+
 def test_use_created_key_on_me(client):
     create = client.post(
         "/auth/keys?name=myclient",

@@ -14,7 +14,7 @@ from app.database import get_db
 from app.errors import database_error_handler, internal_error_handler, not_found_handler
 from app.logger import get_logger
 from app.model_service import get_model, is_model_ready
-from app.routers import auth, images, predict
+from app.routers import auth, datasets, images, predict
 
 logger = get_logger(__name__)
 PROJECT_DIR = Path(__file__).resolve().parent.parent
@@ -46,6 +46,10 @@ app = FastAPI(
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 app.include_router(auth.router, prefix="/auth", tags=["Auth"])
+app.include_router(
+    datasets.router,
+    tags=["Datasets"],
+)
 app.include_router(images.router, prefix="/images", tags=["Images"])
 app.include_router(predict.router, prefix="", tags=["Prediction"])
 

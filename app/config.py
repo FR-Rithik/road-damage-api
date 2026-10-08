@@ -20,6 +20,12 @@ class Settings(BaseSettings):
     max_upload_bytes: int = 1 * 1024 * 1024  # 1 MB
     max_image_pixels: int = 16_000_000
 
+    # Dataset labeling limits
+    max_dataset_zip_bytes: int = 50 * 1024 * 1024
+    max_dataset_uncompressed_bytes: int = 100 * 1024 * 1024
+    max_dataset_images: int = 100
+    max_dataset_image_bytes: int = 5 * 1024 * 1024
+
     database_url_override: str | None = Field(
         default=None,
         validation_alias="DATABASE_URL",
