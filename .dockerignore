@@ -1,0 +1,28 @@
+# Secrets — never bake local environment files into the image
+.env
+.env.*
+!.env.example
+
+# Git and Python development files
+.git/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.pytest-tmp/
+
+# Local databases and runtime uploads
+*.db
+*.db-shm
+*.db-wal
+data/
+
+# Test and development artifacts
+tests/
+*.zip
+image.png
+image1.png
+app/static/styles_old.css
+plan-roadDamageApiModel.prompt.md
+explanations/
