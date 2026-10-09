@@ -1,3 +1,8 @@
+/* ──────────────────────────────────────────────────────────────────
+   Annotation Wizard — Application Logic
+   ────────────────────────────────────────────────────────────────── */
+
+// ─── 1. Element References ───
 const elements = {
   apiKey: document.querySelector("#api-key"),
   connect: document.querySelector("#connect-button"),
@@ -6,6 +11,7 @@ const elements = {
   healthDot: document.querySelector("#health-dot"),
   healthState: document.querySelector("#health-state"),
   today: document.querySelector("#today"),
+  // Single-image assessment
   dropZone: document.querySelector("#drop-zone"),
   fileInput: document.querySelector("#file-input"),
   fileName: document.querySelector("#file-name"),
@@ -19,32 +25,94 @@ const elements = {
   total: document.querySelector("#total-detections"),
   summary: document.querySelector("#report-summary"),
   damageTypes: document.querySelector("#damage-types"),
+  // Activity log
   activityList: document.querySelector("#activity-list"),
   sessionCount: document.querySelector("#session-count"),
+  clearActivity: document.querySelector("#clear-activity-button"),
+  // Dataset labeling
+  zipDropZone: document.querySelector("#zip-drop-zone"),
+  zipDropInner: document.querySelector("#zip-drop-inner"),
+  zipFileInput: document.querySelector("#zip-file-input"),
+  zipFileLabel: document.querySelector("#zip-file-label"),
+  zipClear: document.querySelector("#zip-clear-button"),
+  zipLabel: document.querySelector("#zip-label-button"),
+  zipDownload: document.querySelector("#zip-download-button"),
+  zipProgressArea: document.querySelector("#zip-progress-area"),
+  zipProgressFill: document.querySelector("#zip-progress-fill"),
+  zipProgressText: document.querySelector("#zip-progress-text"),
+  zipFormMessage: document.querySelector("#zip-form-message"),
+  // Image register
+  registerList: document.querySelector("#register-list"),
+  registerCount: document.querySelector("#register-count"),
+  registerEmpty: document.querySelector("#register-empty"),
 };
 
-const colors = ["#d35b45", "#f0aa20", "#3f83a8", "#4a998b"];
+// ─── 2. Constants & State ───
+const colors = ["#ef4444", "#f59e0b", "#3b82f6", "#14b8a6"];
 const classColors = { D00: colors[0], D10: colors[1], D20: colors[2], D40: colors[3] };
+
+const STORAGE_KEYS = {
+  apiKey: "aw-api-key",
+  activity: "aw-activity-log",
+  register: "aw-image-register",
+};
+
 let selectedFile = null;
 let previewUrl = null;
-let assessmentCount = 0;
+let selectedZipFile = null;
 
-elements.apiKey.value = sessionStorage.getItem("roadwatch-api-key") || "";
+// ─── 3. Initialization ───
+elements.apiKey.value = sessionStorage.getItem(STORAGE_KEYS.apiKey) || "";
 elements.today.textContent = new Intl.DateTimeFormat(undefined, {
-  month: "short",
-  day: "numeric",
-  year: "numeric",
+  month: "short", day: "numeric", year: "numeric",
 }).format(new Date());
 
-function setMessage(message = "", isError = false) {
-  elements.formMessage.textContent = message;
-  elements.formMessage.classList.toggle("error", isError);
+// ─── 4. Tab Navigation ───
+const navItems = document.querySelectorAll(".nav-item[data-tab]");
+
+function switchTab(tabId) {
+  navItems.forEach((item) => {
+    item.classList.toggle("active", item.dataset.tab === tabId);
+  });
+  document.querySelectorAll(".tab-content").forEach((el) => {
+    el.classList.toggle("active", el.id === `tab-${tabId}`);
+  });
+}
+
+navItems.forEach((item) => {
+  item.addEventListener("click", (e) => {
+    e.preventDefault();
+    switchTab(item.dataset.tab);
+  });
+});
+
+// ─── 5. Utility Helpers ───
+function setMessage(el, message = "", type = "") {
+  el.textContent = message;
+  el.classList.remove("error", "success");
+  if (type) el.classList.add(type);
 }
 
 function getColor(className, classId = 0) {
   return classColors[className] || colors[classId % colors.length];
 }
 
+function formatTime(date) {
+  return new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(date);
+}
+
+function formatDateTime(dateStr) {
+  const d = new Date(dateStr);
+  return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(d);
+}
+
+function formatFileSize(bytes) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+// ─── 6. Canvas Drawing ───
 function resetCanvas() {
   const context = elements.canvas.getContext("2d");
   context.clearRect(0, 0, elements.canvas.width, elements.canvas.height);
@@ -89,6 +157,7 @@ function drawDetections(detections = [], imageWidth, imageHeight) {
   });
 }
 
+// ─── 7. Report Rendering ───
 function renderRows(damageTypes) {
   elements.damageTypes.replaceChildren();
   if (!damageTypes.length) {
@@ -125,37 +194,174 @@ function renderReport(report) {
   renderRows(report.damage_types || []);
 }
 
-function addActivity(fileName, report) {
-  assessmentCount += 1;
-  elements.sessionCount.textContent = `${assessmentCount} completed`;
-  const empty = elements.activityList.querySelector(".empty-activity");
-  if (empty) empty.remove();
-
-  const row = document.createElement("div");
-  row.className = "activity-row";
-  const name = document.createElement("span");
-  name.className = "activity-file";
-  name.textContent = fileName;
-  const time = document.createElement("span");
-  time.className = "activity-time";
-  time.textContent = new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(new Date());
-  const result = document.createElement("span");
-  const damaged = report.status === "damage_detected";
-  result.className = `activity-result ${damaged ? "damage" : "clear"}`;
-  result.textContent = damaged ? `${report.total_detections} found` : "No damage";
-  row.append(name, time, result);
-  elements.activityList.prepend(row);
+// ─── 8. Activity Log (localStorage-persisted) ───
+function loadActivity() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEYS.activity) || "[]");
+  } catch { return []; }
 }
 
+function saveActivity(entries) {
+  localStorage.setItem(STORAGE_KEYS.activity, JSON.stringify(entries));
+}
+
+function renderActivityList() {
+  const entries = loadActivity();
+  elements.activityList.replaceChildren();
+  elements.sessionCount.textContent = `${entries.length} ${entries.length === 1 ? "entry" : "entries"}`;
+
+  if (!entries.length) {
+    const empty = document.createElement("p");
+    empty.className = "empty-activity";
+    empty.textContent = "No activity recorded yet.";
+    elements.activityList.append(empty);
+    return;
+  }
+
+  entries.forEach((entry) => {
+    const row = document.createElement("div");
+    row.className = "activity-row";
+
+    const typeBadge = document.createElement("span");
+    typeBadge.className = `activity-type type-${entry.type || "analyze"}`;
+    const typeLabels = { analyze: "Analyze", dataset: "Dataset", register: "Register" };
+    typeBadge.textContent = typeLabels[entry.type] || "Analyze";
+
+    const name = document.createElement("span");
+    name.className = "activity-file";
+    name.textContent = entry.fileName;
+
+    const time = document.createElement("span");
+    time.className = "activity-time";
+    time.textContent = formatDateTime(entry.timestamp);
+
+    const result = document.createElement("span");
+    result.className = `activity-result ${entry.resultClass || ""}`;
+    result.textContent = entry.resultText || "";
+
+    row.append(typeBadge, name, time, result);
+    elements.activityList.append(row);
+  });
+}
+
+function addActivity(type, fileName, resultText, resultClass) {
+  const entries = loadActivity();
+  entries.unshift({
+    type,
+    fileName,
+    resultText,
+    resultClass,
+    timestamp: new Date().toISOString(),
+  });
+  // Keep last 200 entries
+  if (entries.length > 200) entries.length = 200;
+  saveActivity(entries);
+  renderActivityList();
+}
+
+function clearActivity() {
+  localStorage.removeItem(STORAGE_KEYS.activity);
+  renderActivityList();
+}
+
+// ─── 9. Image Register (localStorage-persisted) ───
+function loadRegister() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEYS.register) || "[]");
+  } catch { return []; }
+}
+
+function saveRegister(entries) {
+  localStorage.setItem(STORAGE_KEYS.register, JSON.stringify(entries));
+}
+
+function renderRegisterList() {
+  const entries = loadRegister();
+  elements.registerList.replaceChildren();
+  elements.registerCount.textContent = `${entries.length} ${entries.length === 1 ? "image" : "images"}`;
+
+  if (!entries.length) {
+    const empty = document.createElement("p");
+    empty.className = "empty-activity";
+    empty.id = "register-empty";
+    empty.textContent = "No images have been saved to the register yet.";
+    elements.registerList.append(empty);
+    return;
+  }
+
+  entries.forEach((entry) => {
+    const row = document.createElement("div");
+    row.className = "register-row";
+
+    const id = document.createElement("span");
+    id.className = "register-id";
+    id.textContent = `#${entry.imageId}`;
+
+    const name = document.createElement("span");
+    name.className = "register-filename";
+    name.textContent = entry.originalName || entry.filename;
+    name.title = `Server filename: ${entry.filename}`;
+
+    const time = document.createElement("span");
+    time.className = "register-time";
+    time.textContent = formatDateTime(entry.savedAt);
+
+    const result = document.createElement("span");
+    const isDamage = entry.status === "damage_detected";
+    result.className = `register-result ${isDamage ? "damage" : "clear"}`;
+    result.textContent = isDamage ? `${entry.totalDetections} found` : "No damage";
+
+    const action = document.createElement("span");
+    action.className = "register-action";
+    const viewBtn = document.createElement("button");
+    viewBtn.textContent = "View";
+    viewBtn.addEventListener("click", () => {
+      // Switch to single-image tab and show the file info
+      switchTab("assessment");
+      elements.reportState.textContent = isDamage ? "Damage found" : "Clear result";
+      elements.reportState.dataset.status = entry.status;
+      elements.total.textContent = entry.totalDetections;
+      elements.summary.textContent = entry.summary || (isDamage ? "Damage detected in this image." : "No damage detected.");
+      if (entry.damageTypes) renderRows(entry.damageTypes);
+    });
+    action.append(viewBtn);
+
+    row.append(id, name, time, result, action);
+    elements.registerList.append(row);
+  });
+}
+
+function addToRegister(data, originalFileName) {
+  const entries = loadRegister();
+  const prediction = data.prediction || data;
+  const report = data.report || prediction.report;
+
+  entries.unshift({
+    imageId: data.image_id,
+    filename: data.filename,
+    originalName: originalFileName,
+    savedAt: data.created_at || new Date().toISOString(),
+    status: report.status,
+    totalDetections: report.total_detections,
+    summary: report.summary,
+    damageTypes: report.damage_types || [],
+  });
+
+  if (entries.length > 500) entries.length = 500;
+  saveRegister(entries);
+  renderRegisterList();
+}
+
+// ─── 10. File Selection (Single Image) ───
 function selectFile(file) {
   if (!file) return;
   const allowed = ["image/jpeg", "image/png", "image/webp"];
   if (!allowed.includes(file.type)) {
-    setMessage("Use a JPEG, PNG, or WebP image.", true);
+    setMessage(elements.formMessage, "Use a JPEG, PNG, or WebP image.", "error");
     return;
   }
   if (file.size > 1024 * 1024) {
-    setMessage("This image exceeds the 1 MB upload limit.", true);
+    setMessage(elements.formMessage, "This image exceeds the 1 MB upload limit.", "error");
     return;
   }
 
@@ -168,7 +374,7 @@ function selectFile(file) {
   elements.dropZone.classList.add("has-upload");
   elements.analyze.disabled = false;
   resetCanvas();
-  setMessage("");
+  setMessage(elements.formMessage);
   elements.previewImage.onload = resetCanvas;
 }
 
@@ -192,18 +398,20 @@ function resetAssessment() {
   empty.textContent = "Results will appear here.";
   elements.damageTypes.append(empty);
   resetCanvas();
-  setMessage("");
+  setMessage(elements.formMessage);
 }
 
+// ─── 11. API Helpers ───
 async function readError(response) {
   try {
     const body = await response.json();
-    return typeof body.detail === "string" ? body.detail : "The server could not process this image.";
+    return typeof body.detail === "string" ? body.detail : "The server could not process this request.";
   } catch {
-    return "The server could not process this image.";
+    return "The server could not process this request.";
   }
 }
 
+// ─── 12. Connect ───
 async function connect() {
   const key = elements.apiKey.value.trim();
   if (!key) {
@@ -213,17 +421,17 @@ async function connect() {
   }
 
   elements.connect.disabled = true;
-  elements.connect.textContent = "Checking";
+  elements.connect.textContent = "Checking…";
   try {
     const response = await fetch("/auth/me", { headers: { "X-API-Key": key } });
     if (!response.ok) throw new Error(await readError(response));
     const client = await response.json();
-    sessionStorage.setItem("roadwatch-api-key", key);
+    sessionStorage.setItem(STORAGE_KEYS.apiKey, key);
     elements.connectionState.textContent = `Connected as ${client.name}`;
     elements.connectionState.dataset.state = "connected";
     elements.clientName.textContent = client.name;
   } catch (error) {
-    sessionStorage.removeItem("roadwatch-api-key");
+    sessionStorage.removeItem(STORAGE_KEYS.apiKey);
     elements.connectionState.textContent = error.message || "Connection unavailable.";
     elements.connectionState.dataset.state = "error";
     elements.clientName.textContent = "Local session";
@@ -233,24 +441,27 @@ async function connect() {
   }
 }
 
+// ─── 13. Analyze (Single Image) ───
 async function analyze() {
   if (!selectedFile) return;
   const apiKey = elements.apiKey.value.trim();
   if (!apiKey) {
-    setMessage("Connect an API key before analyzing an image.", true);
+    setMessage(elements.formMessage, "Connect an API key before analyzing an image.", "error");
     return;
   }
 
   elements.analyze.disabled = true;
-  elements.analyze.textContent = "Analyzing";
+  elements.analyze.textContent = "Analyzing…";
   elements.reportState.textContent = "Processing";
   elements.reportState.dataset.status = "idle";
-  setMessage("Running road-damage detection...");
+  setMessage(elements.formMessage, "Running road-damage detection…");
   const formData = new FormData();
   formData.append("file", selectedFile);
 
+  const saveToRegister = elements.saveReport.checked;
+
   try {
-    const endpoint = elements.saveReport.checked ? "/images" : "/predict";
+    const endpoint = saveToRegister ? "/images" : "/predict";
     const response = await fetch(endpoint, {
       method: "POST",
       headers: { "X-API-Key": apiKey },
@@ -262,18 +473,162 @@ async function analyze() {
     const report = data.report || prediction.report;
     renderReport(report);
     drawDetections(prediction.detections, prediction.image_width, prediction.image_height);
-    addActivity(selectedFile.name, report);
-    setMessage(elements.saveReport.checked ? "Assessment saved to the image register." : "Assessment complete.");
+
+    // Activity log entry
+    const isDamage = report.status === "damage_detected";
+    const resultText = isDamage ? `${report.total_detections} found` : "No damage";
+    const resultClass = isDamage ? "damage" : "clear";
+    addActivity("analyze", selectedFile.name, resultText, resultClass);
+
+    if (saveToRegister) {
+      addToRegister(data, selectedFile.name);
+      setMessage(elements.formMessage, "Assessment saved to the image register.", "success");
+    } else {
+      setMessage(elements.formMessage, "Assessment complete.", "success");
+    }
   } catch (error) {
     elements.reportState.textContent = "Request failed";
     elements.reportState.dataset.status = "error";
-    setMessage(error.message, true);
+    setMessage(elements.formMessage, error.message, "error");
   } finally {
     elements.analyze.disabled = false;
     elements.analyze.textContent = "Analyze image";
   }
 }
 
+// ─── 14. Dataset Labeling (ZIP) ───
+function selectZipFile(file) {
+  if (!file) return;
+  const name = file.name || "";
+  if (!name.toLowerCase().endsWith(".zip")) {
+    setMessage(elements.zipFormMessage, "Please select a .zip file.", "error");
+    return;
+  }
+  if (file.size > 50 * 1024 * 1024) {
+    setMessage(elements.zipFormMessage, "ZIP exceeds the 50 MB limit.", "error");
+    return;
+  }
+
+  selectedZipFile = file;
+  elements.zipFileLabel.textContent = `${file.name} (${formatFileSize(file.size)})`;
+  elements.zipDropZone.classList.add("has-file");
+  elements.zipLabel.disabled = false;
+  setMessage(elements.zipFormMessage);
+}
+
+function resetZipUpload() {
+  selectedZipFile = null;
+  elements.zipFileInput.value = "";
+  elements.zipFileLabel.textContent = "Drop a ZIP archive here or click to browse";
+  elements.zipDropZone.classList.remove("has-file");
+  elements.zipLabel.disabled = true;
+  elements.zipLabel.style.display = "block";
+  elements.zipDownload.style.display = "none";
+  if (window.currentZipUrl) {
+    URL.revokeObjectURL(window.currentZipUrl);
+    window.currentZipUrl = null;
+  }
+  elements.zipProgressArea.classList.add("hidden");
+  elements.zipProgressFill.style.width = "0%";
+  elements.zipProgressFill.classList.remove("indeterminate");
+  setMessage(elements.zipFormMessage);
+}
+
+async function labelDataset() {
+  if (!selectedZipFile) return;
+  const apiKey = elements.apiKey.value.trim();
+  if (!apiKey) {
+    setMessage(elements.zipFormMessage, "Connect an API key before labeling.", "error");
+    return;
+  }
+
+  elements.zipLabel.disabled = true;
+  elements.zipClear.disabled = true;
+  elements.zipProgressArea.classList.remove("hidden");
+  elements.zipProgressFill.style.width = "0%";
+  elements.zipProgressText.textContent = "Uploading ZIP archive…";
+  setMessage(elements.zipFormMessage);
+
+  const formData = new FormData();
+  formData.append("file", selectedZipFile);
+  const fileName = selectedZipFile.name;
+
+  try {
+    // Use XMLHttpRequest for upload progress tracking
+    const result = await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", "/datasets/label");
+      xhr.setRequestHeader("X-API-Key", apiKey);
+      xhr.responseType = "blob";
+
+      xhr.upload.addEventListener("progress", (e) => {
+        if (e.lengthComputable) {
+          const pct = Math.round((e.loaded / e.total) * 50);
+          elements.zipProgressFill.style.width = `${pct}%`;
+          elements.zipProgressText.textContent = `Uploading… ${Math.round((e.loaded / e.total) * 100)}%`;
+        }
+      });
+
+      xhr.upload.addEventListener("loadend", () => {
+        // Upload complete, now server is processing
+        elements.zipProgressFill.style.width = "50%";
+        elements.zipProgressFill.classList.add("indeterminate");
+        elements.zipProgressText.textContent = "Processing images — this may take a while…";
+      });
+
+      xhr.addEventListener("load", () => {
+        elements.zipProgressFill.classList.remove("indeterminate");
+        if (xhr.status >= 200 && xhr.status < 300) {
+          elements.zipProgressFill.style.width = "100%";
+          elements.zipProgressText.textContent = "Complete! Preparing download…";
+          resolve(xhr.response);
+        } else {
+          // Try to read error from blob
+          const reader = new FileReader();
+          reader.onload = () => {
+            try {
+              const body = JSON.parse(reader.result);
+              reject(new Error(body.detail || "Dataset labeling failed."));
+            } catch {
+              reject(new Error(`Server returned status ${xhr.status}.`));
+            }
+          };
+          reader.onerror = () => reject(new Error("Failed to read error response."));
+          reader.readAsText(xhr.response);
+        }
+      });
+
+      xhr.addEventListener("error", () => reject(new Error("Network error during upload.")));
+      xhr.addEventListener("timeout", () => reject(new Error("Request timed out.")));
+      xhr.timeout = 600000; // 10 minutes
+
+      xhr.send(formData);
+    });
+
+    // Show download button instead of auto-downloading
+    const blob = new Blob([result], { type: "application/zip" });
+    window.currentZipUrl = URL.createObjectURL(blob);
+    elements.zipDownload.setAttribute("href", window.currentZipUrl);
+    elements.zipDownload.setAttribute("download", "annotation-wizard-labeled.zip");
+    elements.zipDownload.style.display = "block";
+    elements.zipLabel.style.display = "none";
+
+    setMessage(elements.zipFormMessage, "Labeled dataset ready for download!", "success");
+    addActivity("dataset", fileName, "Labeled", "success");
+
+  } catch (error) {
+    elements.zipProgressFill.classList.remove("indeterminate");
+    elements.zipProgressFill.style.width = "0%";
+    elements.zipProgressArea.classList.add("hidden");
+    setMessage(elements.zipFormMessage, error.message, "error");
+    addActivity("dataset", fileName, "Failed", "damage");
+  } finally {
+    elements.zipLabel.disabled = false;
+    elements.zipClear.disabled = false;
+  }
+}
+
+// ─── 15. Health Polling ───
 async function checkHealth() {
   try {
     const response = await fetch("/health");
@@ -287,21 +642,47 @@ async function checkHealth() {
   }
 }
 
-elements.fileInput.addEventListener("change", (event) => selectFile(event.target.files[0]));
-elements.dropZone.addEventListener("dragover", (event) => {
-  event.preventDefault();
+// ─── 16. Event Listeners ───
+
+// Single-image drag & drop
+elements.fileInput.addEventListener("change", (e) => selectFile(e.target.files[0]));
+elements.dropZone.addEventListener("dragover", (e) => {
+  e.preventDefault();
   elements.dropZone.classList.add("dragging");
 });
 elements.dropZone.addEventListener("dragleave", () => elements.dropZone.classList.remove("dragging"));
-elements.dropZone.addEventListener("drop", (event) => {
-  event.preventDefault();
+elements.dropZone.addEventListener("drop", (e) => {
+  e.preventDefault();
   elements.dropZone.classList.remove("dragging");
-  selectFile(event.dataTransfer.files[0]);
+  selectFile(e.dataTransfer.files[0]);
 });
 elements.connect.addEventListener("click", connect);
 elements.clear.addEventListener("click", resetAssessment);
 elements.analyze.addEventListener("click", analyze);
 elements.previewImage.addEventListener("load", resetCanvas);
 
+// ZIP drag & drop
+elements.zipDropZone.addEventListener("click", () => elements.zipFileInput.click());
+elements.zipFileInput.addEventListener("change", (e) => selectZipFile(e.target.files[0]));
+elements.zipDropZone.addEventListener("dragover", (e) => {
+  e.preventDefault();
+  elements.zipDropZone.classList.add("dragging");
+});
+elements.zipDropZone.addEventListener("dragleave", () => elements.zipDropZone.classList.remove("dragging"));
+elements.zipDropZone.addEventListener("drop", (e) => {
+  e.preventDefault();
+  elements.zipDropZone.classList.remove("dragging");
+  selectZipFile(e.dataTransfer.files[0]);
+});
+elements.zipClear.addEventListener("click", resetZipUpload);
+elements.zipLabel.addEventListener("click", labelDataset);
+
+// Activity log
+elements.clearActivity.addEventListener("click", clearActivity);
+
+// ─── 17. Boot ───
 checkHealth();
+setInterval(checkHealth, 30000);
+renderActivityList();
+renderRegisterList();
 if (elements.apiKey.value) connect();

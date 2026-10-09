@@ -3,23 +3,52 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#123f39" />
-    <title>Roadwatch | Damage Assessment</title>
+    <meta name="theme-color" content="#1a1a2e" />
+    <meta name="description" content="Annotation Wizard — AI-powered road damage detection and YOLO dataset auto-labeling tool" />
+    <title>Annotation Wizard | Road Damage Intelligence</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/static/styles.css" />
   </head>
   <body>
     <div class="app-shell">
       <aside class="sidebar" aria-label="Application settings">
-        <a class="brand" href="/" aria-label="Roadwatch home">
-          <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
-          <span>Roadwatch</span>
+        <a class="brand" href="/" aria-label="Annotation Wizard home">
+          <span class="brand-mark" aria-hidden="true">
+            <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+              <rect x="1" y="1" width="26" height="26" rx="4" stroke="url(#brandGrad)" stroke-width="2"/>
+              <path d="M8 18L14 8L20 18" stroke="url(#brandGrad)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+              <circle cx="14" cy="20" r="1.5" fill="#f59e0b"/>
+              <defs>
+                <linearGradient id="brandGrad" x1="0" y1="0" x2="28" y2="28">
+                  <stop stop-color="#818cf8"/>
+                  <stop offset="1" stop-color="#f59e0b"/>
+                </linearGradient>
+              </defs>
+            </svg>
+          </span>
+          <span>Annotation Wizard</span>
         </a>
 
         <div class="sidebar-heading">Workspace</div>
         <nav class="nav-list" aria-label="Workspace navigation">
-          <a class="nav-item active" href="#assessment">New assessment</a>
-          <a class="nav-item" href="#results">Detection report</a>
-          <a class="nav-item" href="#activity">Session activity</a>
+          <a class="nav-item active" data-tab="assessment" href="#assessment">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 12L5.5 3H10.5L14 12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="8" cy="13" r="1" fill="currentColor"/></svg>
+            Single image
+          </a>
+          <a class="nav-item" data-tab="dataset" href="#dataset">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="10" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M5 1v3M11 1v3M2 7h12" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            Dataset labeling
+          </a>
+          <a class="nav-item" data-tab="register" href="#register">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.3"/><circle cx="5.5" cy="5.5" r="1.2" fill="currentColor"/><path d="M2 11l3-3 2 2 3-4 4 5" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+            Image register
+          </a>
+          <a class="nav-item" data-tab="activity" href="#activity">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.3"/><path d="M8 4v4l3 2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            Activity log
+          </a>
         </nav>
 
         <section class="connection-panel" aria-labelledby="connection-title">
@@ -40,8 +69,8 @@
       <main>
         <header class="topbar">
           <div>
-            <p class="eyebrow">Field intelligence</p>
-            <h1>Road condition review</h1>
+            <p class="eyebrow">Road damage intelligence</p>
+            <h1>Annotation Wizard</h1>
           </div>
           <div class="topbar-meta">
             <span id="client-name">Local session</span>
@@ -49,86 +78,192 @@
           </div>
         </header>
 
-        <div class="content" id="assessment">
-          <section class="upload-panel" aria-labelledby="upload-title">
-            <div class="section-heading">
-              <div>
-                <p class="eyebrow">Image input</p>
-                <h2 id="upload-title">Inspect a roadway photo</h2>
+        <!-- ─── TAB: Single image assessment ─── -->
+        <div class="tab-content active" id="tab-assessment">
+          <div class="content">
+            <section class="upload-panel" aria-labelledby="upload-title">
+              <div class="section-heading">
+                <div>
+                  <p class="eyebrow">Image input</p>
+                  <h2 id="upload-title">Inspect a roadway photo</h2>
+                </div>
+                <span class="file-name" id="file-name">Reference image</span>
               </div>
-              <span class="file-name" id="file-name">Reference image</span>
-            </div>
 
-            <div class="image-stage" id="drop-zone">
-              <div class="media-frame">
-                <img id="preview-image" src="/reference-image" alt="Reference road damage examples" />
-                <canvas id="annotation-canvas" aria-label="Damage annotations"></canvas>
+              <div class="image-stage" id="drop-zone">
+                <div class="media-frame">
+                  <img id="preview-image" src="/reference-image" alt="Reference road damage examples" />
+                  <canvas id="annotation-canvas" aria-label="Damage annotations"></canvas>
+                </div>
+                <label class="drop-prompt" id="drop-prompt" for="file-input">
+                  <span class="prompt-title">Drop road image here</span>
+                  <span>JPEG, PNG or WebP up to 1 MB</span>
+                </label>
+                <input id="file-input" type="file" accept="image/jpeg,image/png,image/webp" />
               </div>
-              <label class="drop-prompt" id="drop-prompt" for="file-input">
-                <span class="prompt-title">Drop road image here</span>
-                <span>JPEG, PNG or WebP up to 1 MB</span>
-              </label>
-              <input id="file-input" type="file" accept="image/jpeg,image/png,image/webp" />
-            </div>
 
-            <div class="upload-actions">
-              <label class="check-control" for="save-report">
-                <input id="save-report" type="checkbox" />
-                <span>Save to image register</span>
-              </label>
-              <div class="button-group">
-                <button class="text-button" id="clear-button" type="button">Reset</button>
-                <button class="primary-button" id="analyze-button" type="button" disabled>Analyze image</button>
+              <div class="upload-actions">
+                <label class="check-control" for="save-report">
+                  <input id="save-report" type="checkbox" />
+                  <span>Save to image register</span>
+                </label>
+                <div class="button-group">
+                  <button class="text-button" id="clear-button" type="button">Reset</button>
+                  <button class="primary-button" id="analyze-button" type="button" disabled>Analyze image</button>
+                </div>
               </div>
-            </div>
-            <p class="form-message" id="form-message" role="status"></p>
-          </section>
+              <p class="form-message" id="form-message" role="status"></p>
+            </section>
 
-          <aside class="report-panel" id="results" aria-labelledby="report-title">
-            <div class="section-heading">
-              <div>
-                <p class="eyebrow">Assessment</p>
-                <h2 id="report-title">Detection report</h2>
+            <aside class="report-panel" id="results" aria-labelledby="report-title">
+              <div class="section-heading">
+                <div>
+                  <p class="eyebrow">Assessment</p>
+                  <h2 id="report-title">Detection report</h2>
+                </div>
+                <span class="report-state" id="report-state" data-status="idle">Awaiting image</span>
               </div>
-              <span class="report-state" id="report-state" data-status="idle">Awaiting image</span>
-            </div>
 
-            <div class="score-block">
-              <span>Total instances</span>
-              <strong id="total-detections">0</strong>
-              <p id="report-summary">Choose an image to start a new road condition assessment.</p>
-            </div>
-
-            <div class="damage-breakdown">
-              <div class="table-labels">
-                <span>Damage class</span><span>Count</span><span>Confidence</span>
+              <div class="score-block">
+                <span>Total instances</span>
+                <strong id="total-detections">0</strong>
+                <p id="report-summary">Choose an image to start a new road condition assessment.</p>
               </div>
-              <div id="damage-types" class="damage-rows">
-                <p class="empty-row">Results will appear here.</p>
-              </div>
-            </div>
 
-            <div class="legend" aria-label="Annotation legend">
-              <span><i class="legend-swatch d00"></i>D00</span>
-              <span><i class="legend-swatch d10"></i>D10</span>
-              <span><i class="legend-swatch d20"></i>D20</span>
-              <span><i class="legend-swatch d40"></i>D40</span>
-            </div>
-          </aside>
+              <div class="damage-breakdown">
+                <div class="table-labels">
+                  <span>Damage class</span><span>Count</span><span>Confidence</span>
+                </div>
+                <div id="damage-types" class="damage-rows">
+                  <p class="empty-row">Results will appear here.</p>
+                </div>
+              </div>
+
+              <div class="legend" aria-label="Annotation legend">
+                <span><i class="legend-swatch d00"></i>D00</span>
+                <span><i class="legend-swatch d10"></i>D10</span>
+                <span><i class="legend-swatch d20"></i>D20</span>
+                <span><i class="legend-swatch d40"></i>D40</span>
+              </div>
+            </aside>
+          </div>
         </div>
 
-        <section class="activity-panel" id="activity" aria-labelledby="activity-title">
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow">This session</p>
-              <h2 id="activity-title">Recent assessments</h2>
+        <!-- ─── TAB: Dataset labeling ─── -->
+        <div class="tab-content" id="tab-dataset">
+          <div class="dataset-layout">
+            <section class="dataset-panel" aria-labelledby="dataset-title">
+              <div class="section-heading">
+                <div>
+                  <p class="eyebrow">Batch processing</p>
+                  <h2 id="dataset-title">Auto-label a dataset</h2>
+                </div>
+              </div>
+              <p class="panel-description">Upload a ZIP archive containing road images. The model will run detection on every image and produce a YOLO-format labeled dataset with bounding-box annotations, <code>classes.txt</code>, and <code>data.yaml</code>.</p>
+
+              <div class="dataset-drop-zone" id="zip-drop-zone">
+                <div class="dataset-drop-inner" id="zip-drop-inner">
+                  <svg width="48" height="48" viewBox="0 0 48 48" fill="none" class="drop-icon">
+                    <rect x="6" y="10" width="36" height="28" rx="4" stroke="currentColor" stroke-width="2"/>
+                    <path d="M24 20v10M20 24l4-4 4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M16 10V7a3 3 0 013-3h10a3 3 0 013 3v3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  </svg>
+                  <span class="prompt-title" id="zip-file-label">Drop a ZIP archive here or click to browse</span>
+                  <span class="drop-hint">ZIP of images &middot; up to 50 MB &middot; max 100 images</span>
+                </div>
+                <input id="zip-file-input" type="file" accept=".zip,application/zip,application/x-zip-compressed" />
+              </div>
+
+              <div class="dataset-actions">
+                <div class="button-group">
+                  <button class="text-button" id="zip-clear-button" type="button">Reset</button>
+                  <a class="primary-button" id="zip-download-button" style="display: none; text-decoration: none; text-align: center;">
+                    <span class="btn-label">Download Labels</span>
+                  </a>
+                  <button class="primary-button" id="zip-label-button" type="button" disabled>
+                    <span class="btn-label">Label dataset</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="progress-area hidden" id="zip-progress-area">
+                <div class="progress-bar-track">
+                  <div class="progress-bar-fill" id="zip-progress-fill"></div>
+                </div>
+                <p class="progress-text" id="zip-progress-text">Uploading and processing…</p>
+              </div>
+
+              <p class="form-message" id="zip-form-message" role="status"></p>
+            </section>
+
+            <aside class="dataset-info-panel">
+              <h3>How it works</h3>
+              <ol class="info-steps">
+                <li>
+                  <strong>Upload</strong>
+                  <span>Provide a ZIP containing JPG, PNG, or WebP road images.</span>
+                </li>
+                <li>
+                  <strong>Detect</strong>
+                  <span>The model scans each image for D00, D10, D20, and D40 damage classes.</span>
+                </li>
+                <li>
+                  <strong>Label</strong>
+                  <span>Bounding boxes are converted to YOLO format with normalized coordinates.</span>
+                </li>
+                <li>
+                  <strong>Download</strong>
+                  <span>Get back a labeled ZIP with <code>labels/</code>, <code>classes.txt</code>, <code>data.yaml</code>, and a summary.</span>
+                </li>
+              </ol>
+              <div class="info-limits">
+                <h4>Limits</h4>
+                <div class="limit-grid">
+                  <span>Max ZIP size</span><span>50 MB</span>
+                  <span>Max images</span><span>100</span>
+                  <span>Max per image</span><span>5 MB</span>
+                  <span>Formats</span><span>JPG, PNG, WebP</span>
+                </div>
+              </div>
+            </aside>
+          </div>
+        </div>
+
+        <!-- ─── TAB: Image register ─── -->
+        <div class="tab-content" id="tab-register">
+          <section class="register-panel" aria-labelledby="register-title">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Saved uploads</p>
+                <h2 id="register-title">Image register</h2>
+              </div>
+              <span class="session-count" id="register-count">0 images</span>
             </div>
-            <span class="session-count" id="session-count">0 completed</span>
-          </div>
-          <div class="activity-list" id="activity-list">
-            <p class="empty-activity">No assessments in this browser session.</p>
-          </div>
-        </section>
+            <p class="panel-description">Images you save via "Save to image register" during analysis appear here. Records persist across page reloads in your browser.</p>
+            <div class="register-list" id="register-list">
+              <p class="empty-activity" id="register-empty">No images have been saved to the register yet.</p>
+            </div>
+          </section>
+        </div>
+
+        <!-- ─── TAB: Activity log ─── -->
+        <div class="tab-content" id="tab-activity">
+          <section class="activity-panel" id="activity" aria-labelledby="activity-title">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">History</p>
+                <h2 id="activity-title">Activity log</h2>
+              </div>
+              <div class="activity-header-actions">
+                <span class="session-count" id="session-count">0 entries</span>
+                <button class="text-button small" id="clear-activity-button" type="button">Clear log</button>
+              </div>
+            </div>
+            <div class="activity-list" id="activity-list">
+              <p class="empty-activity">No activity recorded yet.</p>
+            </div>
+          </section>
+        </div>
       </main>
     </div>
     <script src="/static/app.js" defer></script>
