@@ -39,6 +39,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title=settings.app_name,
+    description="Automatically generate dataset annotations from uploaded images.",
     version="0.1.0",
     lifespan=lifespan,
 )
